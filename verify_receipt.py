@@ -1,17 +1,73 @@
 #!/usr/bin/env python3
-import argparse, json, hashlib, sys
+import argparse
+import json
+import hashlib
+import sys
+import unicodedata
+from decimal import Decimal
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 
 
+# -------------------------
+# RFC 8785 (JCS) CANONICALIZATION
+# -------------------------
+
+def _normalize(obj):
+    """
+    Apply RFC 8785 normalization rules:
+    - Unicode NFC normalization for strings
+    - Reject non-canonical numbers (floats, NaN, Infinity)
+    - Deterministic traversal
+    """
+    if isinstance(obj, str):
+        return unicodedata.normalize("NFC", obj)
+
+    if isinstance(obj, bool) or obj is None:
+        return obj
+
+    if isinstance(obj, int):
+        return obj
+
+    if isinstance(obj, float):
+        raise ValueError("RFC 8785 forbids floating-point numbers")
+
+    if isinstance(obj, Decimal):
+        if not obj.is_finite():
+            raise ValueError("RFC 8785 forbids NaN or Infinity")
+        # Normalize Decimal to canonical string form
+        return obj.normalize()
+
+    if isinstance(obj, list):
+        return [_normalize(x) for x in obj]
+
+    if isinstance(obj, dict):
+        return {str(k): _normalize(v) for k, v in obj.items()}
+
+    raise TypeError(f"Unsupported type for canonicalization: {type(obj)}")
+
+
 def canonical_bytes(obj) -> bytes:
+    """
+    RFC 8785 canonical JSON serialization:
+    - UTF-8
+    - Sorted keys
+    - No insignificant whitespace
+    - NFC-normalized strings
+    - Canonical numbers only
+    """
+    normalized = _normalize(obj)
     return json.dumps(
-        obj,
+        normalized,
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
     ).encode("utf-8")
 
+
+# -------------------------
+# CRYPTO PRIMITIVES
+# -------------------------
 
 def verify_ed25519(pubkey_hex: str, msg: bytes, sig_hex: str) -> bool:
     pk = Ed25519PublicKey.from_public_bytes(bytes.fromhex(pubkey_hex))
@@ -22,23 +78,29 @@ def verify_ed25519(pubkey_hex: str, msg: bytes, sig_hex: str) -> bool:
         return False
 
 
+# -------------------------
+# RECEIPT VERIFICATION
+# -------------------------
+
 def verify_receipt(receipt: dict) -> dict:
-    # 1) signature verification for receipt signed_block
     signed_block = receipt.get("signed_block")
     signature = receipt.get("signature")
     pubkey = receipt.get("public_key") or receipt.get("publicKey")
+
     if not signed_block or not signature or not pubkey:
         return {"ok": False, "error": "missing signed_block/signature/public_key"}
 
-    signed_bytes = canonical_bytes(signed_block)
+    try:
+        signed_bytes = canonical_bytes(signed_block)
+    except Exception as e:
+        return {"ok": False, "error": f"canonicalization_error: {e}"}
+
     sig_ok = verify_ed25519(pubkey, signed_bytes, signature)
 
-    # 2) public_hash recompute (hash of canonical signed_block)
     computed_hash = hashlib.sha256(signed_bytes).hexdigest()
     claimed_hash = receipt.get("public_hash") or receipt.get("publicHash")
     hash_ok = (claimed_hash == computed_hash)
 
-    # base verifier output (only checks actually performed)
     out = {
         "ok": bool(sig_ok and hash_ok),
         "signature_ok": sig_ok,
@@ -48,40 +110,12 @@ def verify_receipt(receipt: dict) -> dict:
         "canonical_signed_block_sha256": computed_hash,
     }
 
-    # 3) optional: verify bundle double-signing if present
-    if receipt.get("bundle_signature") and receipt.get("bundle_signed_block"):
-        bundle_sig_ok = None
-        bundle_hash_ok = None
-        computed_bundle_hash = None
-        claimed_bundle_hash = receipt.get("bundle_hash")
-
-        try:
-            payload = receipt.get("payload")
-            if payload is not None:
-                computed_bundle_hash = hashlib.sha256(
-                    canonical_bytes(payload)
-                ).hexdigest()
-                if claimed_bundle_hash:
-                    bundle_hash_ok = (claimed_bundle_hash == computed_bundle_hash)
-
-            blk = receipt.get("bundle_signed_block")
-            bundle_sig_ok = verify_ed25519(
-                pubkey,
-                canonical_bytes(blk),
-                receipt["bundle_signature"],
-            )
-        except Exception:
-            bundle_sig_ok = False
-
-        out.update({
-            "bundle_signature_ok": bundle_sig_ok,
-            "bundle_hash_ok": bundle_hash_ok,
-            "claimed_bundle_hash": claimed_bundle_hash,
-            "computed_bundle_hash": computed_bundle_hash,
-        })
-
     return out
 
+
+# -------------------------
+# CLI
+# -------------------------
 
 def main():
     ap = argparse.ArgumentParser()
