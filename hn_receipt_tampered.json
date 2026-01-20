@@ -1,0 +1,91 @@
+{
+  "algorithm": "ed25519",
+  "public_hash": "7e7314ead1c0722f02ba873e6bbbb973af596f10e376927e025f61d72a132a9f",
+  "public_key": "d18b603a5e6fefa834984f07fd0153b1236abb5454e4402be4162a1af678bda0",
+  "signature": "1bf4782accbffc3247e067468202da45c3a99153840bb16fd10cb4e14900bed08f4f05c67f07a67eb6ed30a1fa9b3e61e8530809f525b587647339e648751c01",
+  "signed_block": {
+    "id": "116bca6a-0b00-4100-bf53-d78fcb28249b",
+    "payload": {
+      "input": {
+        "prompt": "Summarize how OAuth 2.0 works."
+      },
+      "meta": {
+        "environment": "prod",
+        "model": "gpt-5",
+        "request_id": "req-1034",
+        "trace_id": "c912aa19"
+      },
+      "output": {
+        "text": "OAuth 2.0 is a delegated authorization framework that allows applications to access resources on behalf of a user without exposing credentials. It relies on access tokens, refresh tokens, client IDs, redirect URIs, and controlled scopes. The flow varies by scenario (authorization code, client credentials, PKCE), but the core principle stays consistent. TAMPER"
+      }
+    },
+    "predicates": [
+      {
+        "field": "output.text",
+        "id": "SEC-001",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "AKIA[0-9A-Z]{16}"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-002",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "sk-[A-Za-z0-9]{20,}"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-003",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "AIza[0-9A-Za-z\\-_]{20,}"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-004",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "BEGIN RSA PRIVATE KEY"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-005",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "(?i)(secret_key|api_key|private_key|client_secret)"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-006",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "(?i)(password\\s*[:=]|pwd\\s*[:=])"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-007",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "\\b[0-9a-fA-F]{32}\\b"
+      },
+      {
+        "field": "output.text",
+        "id": "SEC-008",
+        "policy_id": "2c9e738b-3d26-4dba-9f41-f7aa9b822be8",
+        "policy_name": "Secrets & Credential Leakage Policy (Security / Confidentiality)",
+        "type": "regex_absent",
+        "value": "(?i)(dev\\.|staging\\.|internal\\.|corp\\.)[A-Za-z0-9\\.-]+"
+      }
+    ],
+    "verdict": "PASS"
+  },
+  "signer_kid": "418d90e22250f161"
+}
