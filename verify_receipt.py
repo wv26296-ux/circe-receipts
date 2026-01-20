@@ -9,17 +9,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.exceptions import InvalidSignature
 
 
-# -------------------------
-# RFC 8785 (JCS) CANONICALIZATION
-# -------------------------
 
 def _normalize(obj):
-    """
-    Apply RFC 8785 normalization rules:
-    - Unicode NFC normalization for strings
-    - Reject non-canonical numbers (floats, NaN, Infinity)
-    - Deterministic traversal
-    """
+
     if isinstance(obj, str):
         return unicodedata.normalize("NFC", obj)
 
@@ -35,7 +27,7 @@ def _normalize(obj):
     if isinstance(obj, Decimal):
         if not obj.is_finite():
             raise ValueError("RFC 8785 forbids NaN or Infinity")
-        # Normalize Decimal to canonical string form
+
         return obj.normalize()
 
     if isinstance(obj, list):
@@ -48,14 +40,7 @@ def _normalize(obj):
 
 
 def canonical_bytes(obj) -> bytes:
-    """
-    RFC 8785 canonical JSON serialization:
-    - UTF-8
-    - Sorted keys
-    - No insignificant whitespace
-    - NFC-normalized strings
-    - Canonical numbers only
-    """
+
     normalized = _normalize(obj)
     return json.dumps(
         normalized,
