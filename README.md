@@ -1,4 +1,4 @@
-# CIRCE — Offline‑Verifiable Receipts for AI Agent Actions
+# CIRCE — Offline-Verifiable Receipts for AI Agent Actions
 
 This repo is a tiny **offline verification kit** for a simple primitive:
 
@@ -9,8 +9,8 @@ A receipt is a **canonical JSON artifact** that records what an agent decided / 
 ## Files
 
 - `hn_receipt.json` — example signed receipt (should verify ✅)
-- `hn_receipt_tampered.json` — same receipt with a mutation (should fail ❌)
-- `verify_receipt.py` — standalone verifier (Ed25519 + SHA‑256)
+- `hn_receipt_tampered.json` — same receipt with a single mutation inside `signed_block` (should fail ❌)
+- `verify_receipt.py` — standalone verifier (Ed25519 + SHA-256)
 - `requirements.txt` — Python dependency list
 - `LICENSE` — MIT
 
@@ -21,7 +21,7 @@ A receipt is a **canonical JSON artifact** that records what an agent decided / 
 ### 1) Install requirements
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate  # macOS/Linux
 pip install -r requirements.txt
 ```
@@ -29,12 +29,12 @@ pip install -r requirements.txt
 ### 2) Verify the receipt (no network)
 
 ```bash
-python verify_receipt.py hn_receipt.json
-python verify_receipt.py hn_receipt_tampered.json
+python3 verify_receipt.py hn_receipt.json
+python3 verify_receipt.py hn_receipt_tampered.json
 ```
 
-Expected:
-- `hn_receipt.json` → `"ok": true`
+Expected (abridged):
+- `hn_receipt.json` → `"ok": true`, `"signature_ok": true`, `"public_hash_ok": true`
 - `hn_receipt_tampered.json` → `"ok": false`
 
 ---
@@ -62,11 +62,10 @@ Signing/verifying operates on a deterministic byte string:
 
 - stable key ordering (`sort_keys=True`)
 - no whitespace (`separators=(',', ':')`)
-- UTF‑8 encoding
+- UTF-8 encoding (`ensure_ascii=False`, encoded to UTF-8)
 
-This is **JCS‑style / RFC 8785‑inspired canonicalization intent** so the same `signed_block` yields the same bytes across runtimes/languages.
-
-> Note: the goal here is deterministic bytes. If you have strong opinions about strict RFC 8785 compliance or alternative canonicalization rules, please critique.
+This kit uses a **JCS/RFC-8785–style subset** (stable key order + compact encoding) to produce deterministic bytes.
+If you care about strict RFC 8785 edge cases (number formatting, Unicode normalization nuances, etc.), please critique.
 
 ---
 
@@ -93,6 +92,7 @@ Those layers can sit *around* this primitive, but aren’t required to validate 
 ## Feedback wanted
 
 I’d appreciate feedback on:
-- threat‑model gaps / failure modes
+- threat-model gaps / failure modes
 - receipt schema design (what should/shouldn’t be signed)
 - how this behaves in real agent pipelines (streaming, tool calls, partial failures, retries)
+
